@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "src"
+name = "Big Data Bowl 2025"
 version = "0.1.0"
 description = "App for the 2025 Big Data Bowl"
 authors = ["ianastalosh <45411578+ianastalosh@users.noreply.github.com>"]
