@@ -2,8 +2,6 @@
 import polars as pl
 import logging
 
-
-
 class TrackingDataProcessor:
     def __init__(self, tracking_data_file_paths: list[str]) -> None:
         if not isinstance(tracking_data_file_paths, list):
