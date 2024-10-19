@@ -2,6 +2,8 @@
 import polars as pl
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import matplotlib.animation as animation
+from IPython.display import HTML
 
 MIN_X = 0
 MIN_Y = 0
@@ -19,8 +21,8 @@ class PlotPlay():
         self.colour2 = "green"
         self.ball_colour = "brown"
         self.fig, self.ax = plt.subplots()
+        self.frame_ids = play_df.select(pl.col("frameId").unique().sort()).to_series().to_list()
         plt.close()
-
 
     def _get_play_frame(self, frame_id):
         return self.play_df.filter(pl.col("frameId") == frame_id)
@@ -42,6 +44,43 @@ class PlotPlay():
 
     def plot_frame(self, frame_id):
         pass
+
+    def _init_animation(self):
+        self.ax.clear()
+        self._plot_field()
+        return []
+    
+    def _animate_frame(self, frame_id):
+        self.ax.clear()
+        self._plot_field()
+        self._plot_players_for_frame(frame_id)
+        return []
+    
+    def animate_play(self, interval=100, save_path=None):
+        # Create new figure for animation
+        self.fig, self.ax = plt.subplots()
+        
+        # Create animation
+        anim = animation.FuncAnimation(
+            self.fig,
+            self._animate_frame,
+            init_func=self._init_animation,
+            frames=self.frame_ids,
+            interval=interval,
+            blit=True
+        )
+        
+        # Save the animation if save_path is provided
+        if save_path:
+            if save_path.endswith('.gif'):
+                anim.save(save_path, writer='pillow')
+            elif save_path.endswith('.mp4'):
+                anim.save(save_path, writer='ffmpeg')
+            plt.close()
+
+        plt.close()
+        return HTML(anim.to_jshtml())
+
 
 
 class PlotPlayHorizontal(PlotPlay):
