@@ -8,7 +8,7 @@ MIN_Y = 0
 MAX_X = 120
 MAX_Y = 160/3
 
-class PlotPlayHorizontal():
+class PlotPlay():
     def __init__(self, play_df):
         self.play_df = play_df
         self.min_x = MIN_X
@@ -19,7 +19,8 @@ class PlotPlayHorizontal():
         self.colour2 = "green"
         self.ball_colour = "brown"
         self.fig, self.ax = plt.subplots()
-        plt.close(self.fig)
+        plt.close()
+
 
     def _get_play_frame(self, frame_id):
         return self.play_df.filter(pl.col("frameId") == frame_id)
@@ -32,6 +33,20 @@ class PlotPlayHorizontal():
             "football": self.ball_colour
         }
         return team_colours
+    
+    def _plot_field(self):
+        pass
+
+    def _plot_players_for_frame(self, frame_id):
+        pass
+
+    def plot_frame(self, frame_id):
+        pass
+
+
+class PlotPlayHorizontal(PlotPlay):
+    def __init__(self, play_df):
+        super().__init__(play_df)
     
     def _plot_field(self):
         
@@ -94,32 +109,18 @@ class PlotPlayHorizontal():
         self.ax.scatter(football["x"][0], football["y"][0], color="brown", s=50, zorder=3)
 
     def plot_frame(self, frame_id):
+        # Reset the figure
+        self.fig, self.ax = plt.subplots()
+        plt.close()
+
         self._plot_field()
         self._plot_players_for_frame(frame_id)
         self.fig.show()
-        return self.fig       
+        return self.fig         
 
-class PlotPlayFrameVertical():
+class PlotPlayVertical(PlotPlay):
     def __init__(self, play_df):
-        self.play_df = play_df
-        self.min_x = MIN_X
-        self.min_y = MIN_Y
-        self.max_x = MAX_X
-        self.max_y = MAX_Y
-        self.colour1 = "red"
-        self.colour2 = "green"
-        self.ball_colour = "brown"
-        self.fig, self.ax = plt.subplots()
-        plt.close(self.fig) # Don't display empty plot immediately in Jupyter notebook
-
-    def _create_team_colours_dict(self):
-        unique_teams = self.play_df.filter(pl.col("club") != "football").select(pl.col("club").unique()).sort("club")
-        team_colours = {
-            unique_teams.item(0,0): self.colour1, 
-            unique_teams.item(1,0): self.colour2,
-            "football": self.ball_colour
-        }
-        return team_colours
+        super().__init__(play_df)
     
     def _plot_field(self):
         # Create limits
@@ -159,10 +160,13 @@ class PlotPlayFrameVertical():
 
         self.ax.axis('off')
 
-    def _plot_players(self):
+    def _plot_players_for_frame(self, frame_id):
+        # Get the frame df
+        frame_df = self._get_play_frame(frame_id)
+
         # Add the players
-        players = self.play_df.filter(pl.col("club") != "football")
-        football = self.play_df.filter(pl.col("club") == "football")
+        players = frame_df.filter(pl.col("club") != "football")
+        football = frame_df.filter(pl.col("club") == "football")
 
         team_colours = self._create_team_colours_dict()
         
@@ -178,9 +182,13 @@ class PlotPlayFrameVertical():
         self.ax.scatter(football["y"][0], football["x"][0], color="brown", s=50, zorder=3)
 
 
-    def plot_frame(self):
+    def plot_frame(self, frame_id):
+        # Reset the figure
+        self.fig, self.ax = plt.subplots()
+        plt.close()
+
         self._plot_field()
-        self._plot_players()
+        self._plot_players_for_frame(frame_id)
         self.fig.show()
-        return self.fig
+        return self.fig    
     
