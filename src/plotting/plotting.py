@@ -4,22 +4,26 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.animation as animation
 from IPython.display import HTML
-
-MIN_X = 0
-MIN_Y = 0
-MAX_X = 120
-MAX_Y = 160/3
+from config import Constants
 
 class PlotPlay():
-    def __init__(self, play_df):
+    def __init__(self, 
+                 play_df, 
+                 min_x=Constants.X_MIN, 
+                 min_y=Constants.Y_MIN,
+                 max_x=Constants.X_MAX, 
+                 max_y=Constants.Y_MAX, 
+                 colour1=Constants.TEAM_COLOUR_1,
+                 colour2=Constants.TEAM_COLOUR_2, 
+                 ball_colour=Constants.BALL_COLOUR):
         self.play_df = play_df
-        self.min_x = MIN_X
-        self.min_y = MIN_Y
-        self.max_x = MAX_X
-        self.max_y = MAX_Y
-        self.colour1 = "red"
-        self.colour2 = "green"
-        self.ball_colour = "brown"
+        self.min_x = min_x
+        self.min_y = min_y
+        self.max_x = max_x
+        self.max_y = max_y,
+        self.colour1 = colour1
+        self.colour2 = colour2
+        self.ball_colour = ball_colour
         self.fig, self.ax = plt.subplots()
         self.frame_ids = play_df.select(pl.col("frameId").unique().sort()).to_series().to_list()
         plt.close()
