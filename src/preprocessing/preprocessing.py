@@ -1,6 +1,6 @@
 import polars as pl
-from tracking_data import TrackingDataProcessor
-from non_tracking_data import NonTrackingDataProcessor
+from .tracking_data import TrackingDataProcessor
+from .non_tracking_data import NonTrackingDataProcessor
 
 class BigDataBowlData:
     def __init__(self, 

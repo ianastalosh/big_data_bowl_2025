@@ -11,9 +11,8 @@ class NonTrackingDataProcessor:
         self.players = self.load_data(player_file_path)
         self.player_plays = self.load_data(player_plays_file_path)
 
-    def load_data(self) -> pl.DataFrame:
-        data = pl.read_csv(self.file_path)
-        self.data = data
+    def load_data(self, file_path) -> pl.DataFrame:
+        data = pl.scan_csv(file_path, ignore_errors=True)
         return data
     
     
@@ -73,7 +72,7 @@ class NonTrackingDataProcessor:
         aggregated_player_plays = self._aggregate_player_plays_df()
 
         # Create possession team features
-        output_data = games_plays_joined.with_column(
+        output_data = games_plays_joined.with_columns(
             # Get pre snap scores
             pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapHomeScore")).otherwise(pl.col("preSnapVisitorScore")).alias("preSnapPossessionTeamScore"),
             pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapVisitorScore")).otherwise(pl.col("preSnapHomeScore")).alias("preSnapDefensiveTeamScore"),
