@@ -68,7 +68,7 @@ class NonTrackingDataProcessor:
         return possession_team_df, defensive_team_df
     
 
-    def _feature_engineer_play_data(self) -> pl.DataFrame:
+    def feature_engineer_play_data(self) -> pl.DataFrame:
         games_plays_joined = self._join_games_plays_df()
         aggregated_player_plays = self._aggregate_player_plays_df()
 
