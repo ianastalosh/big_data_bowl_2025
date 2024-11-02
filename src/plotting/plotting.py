@@ -20,7 +20,7 @@ class PlotPlay():
         self.min_x = min_x
         self.min_y = min_y
         self.max_x = max_x
-        self.max_y = max_y,
+        self.max_y = max_y
         self.colour1 = colour1
         self.colour2 = colour2
         self.ball_colour = ball_colour
@@ -167,8 +167,8 @@ class PlotPlayVertical(PlotPlay):
     
     def _plot_field(self):
         # Create limits
-        self.ax.set_xlim(MIN_Y - 10, MAX_Y + 10)
-        self.ax.set_ylim(MIN_X - 10, MAX_X + 10) 
+        self.ax.set_xlim(self.min_y - 10, self.max_y + 10)
+        self.ax.set_ylim(self.min_x - 10, self.max_x + 10) 
 
         # Colour the endzones
         endzone1 = patches.Rectangle((0,0), 160/3, 10, linewidth=1, edgecolor='darkviolet', facecolor='darkviolet')
