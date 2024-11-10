@@ -27,18 +27,23 @@ class NonTrackingDataProcessor:
 
         """
         team_level_player_play_summary = self.player_plays.\
-            group_by(["gameId", "playId", "teamAbbr"]).\
-            agg((pl.col("inMotionAtBallSnap") == "TRUE").sum().alias("playNumPlayersInMotionAtSnap"),
-                (pl.col("shiftSinceLineset") == "TRUE").sum().alias("playNumPlayersShiftSinceLineset"),
-                (pl.col("motionSinceLineset") == "TRUE").sum().alias("playNumPlayersMotionSinceLineset"),
-                pl.col("yardageGainedAfterTheCatch").sum().alias("playYardageGainedAfterTheCatch"),
-                (pl.col("wasRunningRoute") == "1").sum().alias("playNumRoutesRun"),
-                ((pl.col("motionSinceLineset") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum().alias("playerMotionWasTargetted"),
-                ((pl.col("inMotionAtBallSnap") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum().alias("playerInMotionAtSnapWasTargetted")).\
             with_columns(
-                (pl.col("playNumPlayersInMotionAtSnap") > 0).alias("playHadPlayersInMotionAtSnap"),
-                (pl.col("playNumPlayersMotionSinceLineset") > 0).alias("playHadPlayersMotionSinceLineset"),
-                (pl.col("playNumPlayersShiftSinceLineset") > 0).alias("playHadPlayersShiftSinceLineset")
+                motionOrShiftSinceLineset=((pl.col("motionSinceLineset") == "TRUE") | (pl.col("shiftSinceLineset") == "TRUE"))).\
+            group_by(["gameId", "playId", "teamAbbr"]).\
+            agg(playNumPlayersInMotionAtSnap=(pl.col("inMotionAtBallSnap") == "TRUE").sum(),
+                playNumPlayersShiftSinceLineset=(pl.col("shiftSinceLineset") == "TRUE").sum(),
+                playNumPlayersMotionSinceLineset=(pl.col("motionSinceLineset") == "TRUE").sum(),
+                playNumPlayersMotionOrShiftSinceLineset=(pl.col("motionOrShiftSinceLineset") == True).sum(),
+                playYardageGainedAfterTheCatch=pl.col("yardageGainedAfterTheCatch").sum(),
+                playNumRoutesRun=(pl.col("wasRunningRoute") == "1").sum(),
+                playerMotionWasTargetted=((pl.col("motionSinceLineset") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum(),
+                playerInMotionAtSnapWasTargetted=((pl.col("inMotionAtBallSnap") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum()).\
+            with_columns(
+                playHadPlayersInMotionAtSnap=(pl.col("playNumPlayersInMotionAtSnap") > 0),
+                playHadPlayersMotionSinceLineset=(pl.col("playNumPlayersMotionSinceLineset") > 0),
+                playHadPlayersShiftSinceLineset=(pl.col("playNumPlayersShiftSinceLineset") > 0),
+                playhadPlayersMotionOrShiftSinceLineset=(pl.col("playNumPlayersMotionOrShiftSinceLineset") > 0),
+                playHadMotion=(pl.when(pl.col("playNumPlayersInMotionAtSnap") + pl.col("playNumPlayersMotionOrShiftSinceLineset") > 0).then(1).otherwise(0)),
         )
 
         return team_level_player_play_summary
@@ -53,6 +58,12 @@ class NonTrackingDataProcessor:
             possessionTeamNumPlayersMotionSinceLineset = pl.col("playNumPlayersMotionSinceLineset"),
             playerMotionWasTargetted = pl.col("playerMotionWasTargetted"),
             playerInMotionAtSnapWasTargetted = pl.col("playerInMotionAtSnapWasTargetted"),
+            playHadPlayersInMotionAtSnap=pl.col("playHadPlayersInMotionAtSnap"),
+            playHadPlayersMotionSinceLineset=pl.col("playHadPlayersMotionSinceLineset"),
+            playHadPlayersShiftSinceLineset=pl.col("playHadPlayersShiftSinceLineset"),
+            playhadPlayersMotionOrShiftSinceLineset=pl.col("playhadPlayersMotionOrShiftSinceLineset"),
+            playHadMotion=pl.col("playHadMotion"),
+            
         )
 
         defensive_team_df = aggregated_player_play_df.select(
@@ -73,19 +84,24 @@ class NonTrackingDataProcessor:
 
         # Create possession team features
         output_data = games_plays_joined.with_columns(
+            # Get distance to the endzone
+            distanceToEndzone=pl.when(pl.col("possessionTeam") == pl.col("yardlineSide")).then(100 - pl.col("yardlineNumber")).otherwise(pl.col("yardlineNumber")),
+            # Extract play type
+            playType=pl.when(pl.col("passResult") == "").then(pl.lit("run")).otherwise(pl.lit("pass")),
             # Get pre snap scores
-            pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapHomeScore")).otherwise(pl.col("preSnapVisitorScore")).alias("preSnapPossessionTeamScore"),
-            pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapVisitorScore")).otherwise(pl.col("preSnapHomeScore")).alias("preSnapDefensiveTeamScore"),
+            preSnapPossessionTeamScore=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapHomeScore")).otherwise(pl.col("preSnapVisitorScore")),
+            preSnapDefensiveTeamScore=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapVisitorScore")).otherwise(pl.col("preSnapHomeScore")),
             # Get pre snap win probability
-            pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapHomeTeamWinProbability")).otherwise(pl.col("preSnapVisitorTeamWinProbability")).alias("preSnapPossessionTeamWP"),
-            pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapVisitorTeamWinProbability")).otherwise(pl.col("preSnapHomeTeamWinProbability")).alias("preSnapDefensiveTeamWP"),
+            preSnapPossessionTeamWP=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapHomeTeamWinProbability")).otherwise(pl.col("preSnapVisitorTeamWinProbability")),
+            preSnapDefensiveTeamWP=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapVisitorTeamWinProbability")).otherwise(pl.col("preSnapHomeTeamWinProbability")),
             # Get win probability added
-            pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("homeTeamWinProbabilityAdded")).otherwise(pl.col("visitorTeamWinProbilityAdded")).alias("possesionTeamWPAdded"),
-            pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("visitorTeamWinProbabilityAdded")).otherwise(pl.col("homeTeamWinProbilityAdded")).alias("defensiveTeamWPAdded"),
+            possesionTeamWPAdded=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("homeTeamWinProbabilityAdded")).otherwise(pl.col("visitorTeamWinProbilityAdded")),
+            defensiveTeamWPAdded=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("visitorTeamWinProbilityAdded")).otherwise(pl.col("homeTeamWinProbabilityAdded")),
             # Add defensive team expected points added
-            -1 * pl.col("expectedPointsAdded").alias("defensiveTeamExpectedPointsAdded"),
+            defensiveTeamExpectedPointsAdded=(-1 * pl.col("expectedPointsAdded")),
             # Add score difference
-            pl.col("preSnapPossessionTeamScore") - pl.col("preSnapDefensiveTeamScore").alias("scoreDifference"),
+        ).with_columns(
+            scoreDifference=(pl.col("preSnapPossessionTeamScore") - pl.col("preSnapDefensiveTeamScore")),
         )
 
         # Join the aggregated player plays data
