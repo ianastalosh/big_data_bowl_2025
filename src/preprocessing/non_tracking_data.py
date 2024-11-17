@@ -95,7 +95,7 @@ class NonTrackingDataProcessor:
             preSnapPossessionTeamWP=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapHomeTeamWinProbability")).otherwise(pl.col("preSnapVisitorTeamWinProbability")),
             preSnapDefensiveTeamWP=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("preSnapVisitorTeamWinProbability")).otherwise(pl.col("preSnapHomeTeamWinProbability")),
             # Get win probability added
-            possesionTeamWPAdded=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("homeTeamWinProbabilityAdded")).otherwise(pl.col("visitorTeamWinProbilityAdded")),
+            possessionTeamWPAdded=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("homeTeamWinProbabilityAdded")).otherwise(pl.col("visitorTeamWinProbilityAdded")),
             defensiveTeamWPAdded=pl.when(pl.col("possessionTeam") == pl.col("homeTeamAbbr")).then(pl.col("visitorTeamWinProbilityAdded")).otherwise(pl.col("homeTeamWinProbabilityAdded")),
             # Add defensive team expected points added
             defensiveTeamExpectedPointsAdded=(-1 * pl.col("expectedPointsAdded")),
