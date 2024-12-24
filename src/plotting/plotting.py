@@ -26,11 +26,29 @@ class PlotPlay():
         self.ball_colour = ball_colour
         self.fig, self.ax = plt.subplots()
         self.frame_ids = play_df.select(pl.col("frameId").unique().sort()).to_series().to_list()
+        self.event_text = None
+        self.last_valid_event = None
         plt.close()
 
     def _get_play_frame(self, frame_id):
         return self.play_df.filter(pl.col("frameId") == frame_id)
     
+    def _get_latest_event(self, frame_id):
+        # Get all events up to current frame
+        events = (self.play_df
+                .filter(pl.col("frameId") <= frame_id)
+                .filter(pl.col("event").is_not_null())
+                .filter(pl.col("event") != "NA")  # Filter out NA events
+                .select("frameId", "event")
+                .sort("frameId"))
+        
+        # Return the latest event if any exists
+        if len(events) > 0:
+            latest_event = events.tail(1)["event"][0]
+            self.last_valid_event = latest_event  # Update the last valid event
+            return latest_event
+        return self.last_valid_event  # Return the last valid event if no new event
+        
     def _create_team_colours_dict(self):
         unique_teams = self.play_df.filter(pl.col("club") != "football").select(pl.col("club").unique()).sort("club")
         team_colours = {
@@ -46,18 +64,53 @@ class PlotPlay():
     def _plot_players_for_frame(self, frame_id):
         pass
 
+    def _plot_event(self, event):
+        # Remove old event text if it exists
+        if self.event_text:
+            try:
+                self.event_text.remove()
+            except:
+                pass  # Text may have already been cleared by ax.clear()
+            self.event_text = None
+        
+        if event:
+            # Add new event text at top of plot
+            self.event_text = self.ax.text(
+                0.5, 1.05,  # Position above the field
+                f"Latest event: {event}",
+                transform=self.ax.transAxes,  # Use axis coordinates
+                ha='center',
+                va='bottom',
+                fontsize=12,
+                fontweight='bold'
+            )
+
     def plot_frame(self, frame_id):
-        pass
+        # Reset the figure
+        self.fig, self.ax = plt.subplots()
+        plt.close()
+
+        self._plot_field()
+        self._plot_players_for_frame(frame_id)
+        
+        event = self._get_latest_event(frame_id)
+        self._plot_event(event)
+        
+        self.fig.show()
+        return self.fig
 
     def _init_animation(self):
         self.ax.clear()
         self._plot_field()
-        return []
+        self._plot_event(None)
+        return self.ax.collections + self.ax.texts + self.ax.patches
     
     def _animate_frame(self, frame_id):
         self.ax.clear()
         self._plot_field()
         self._plot_players_for_frame(frame_id)
+        event = self._get_latest_event(frame_id)
+        self._plot_event(event)
         return []
     
     def animate_play(self, interval=100, save_path=None):
@@ -149,17 +202,7 @@ class PlotPlayHorizontal(PlotPlay):
             self.ax.text(row["x"], row["y"], row["jerseyNumber"], fontsize=8, ha='center', va='center', zorder=4)
 
         # Plot the ball
-        self.ax.scatter(football["x"][0], football["y"][0], color="brown", s=50, zorder=3)
-
-    def plot_frame(self, frame_id):
-        # Reset the figure
-        self.fig, self.ax = plt.subplots()
-        plt.close()
-
-        self._plot_field()
-        self._plot_players_for_frame(frame_id)
-        self.fig.show()
-        return self.fig         
+        self.ax.scatter(football["x"][0], football["y"][0], color="brown", s=50, zorder=3)        
 
 class PlotPlayVertical(PlotPlay):
     def __init__(self, play_df):
@@ -222,16 +265,5 @@ class PlotPlayVertical(PlotPlay):
             self.ax.text(row["y"], row["x"], row["jerseyNumber"], fontsize=8, ha='center', va='center', zorder=4, clip_on=True)
 
         # Plot the football
-        self.ax.scatter(football["y"][0], football["x"][0], color="brown", s=50, zorder=3)
-
-
-    def plot_frame(self, frame_id):
-        # Reset the figure
-        self.fig, self.ax = plt.subplots()
-        plt.close()
-
-        self._plot_field()
-        self._plot_players_for_frame(frame_id)
-        self.fig.show()
-        return self.fig    
+        self.ax.scatter(football["y"][0], football["x"][0], color="brown", s=50, zorder=3) 
     
