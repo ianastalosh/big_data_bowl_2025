@@ -30,10 +30,14 @@ class PlayPredictionModel:
         line_set_tracking = play_data["line_set_tracking"]
         ball_snap_tracking = play_data["ball_snap_tracking"]
 
-        x_los = line_set_tracking.filter(pl.col("club") == "football").select("x").item()
-        y_los = line_set_tracking.filter(pl.col("club") == "football").select("y").item()
-
-        x_first_down_marker = x_los + play_info["yardsToGo"]
+        if len(line_set_tracking) == 0:
+            x_los = None
+            y_los = None
+            x_first_down_marker = None
+        else:
+            x_los = line_set_tracking.filter(pl.col("club") == "football").select("x").item()
+            y_los = line_set_tracking.filter(pl.col("club") == "football").select("y").item()
+            x_first_down_marker = x_los + play_info["yardsToGo"]
 
         return {
             "play_info": play_info,
@@ -238,6 +242,14 @@ class PlayPredictionModel:
         play_data = self.get_specific_play_data(gameId, playId)
         game_state_features = self.get_game_state_features(play_data["play_info"])
 
+        if len(play_data["line_set_tracking"]) == 0:
+            print(f"Play {gameId}-{playId} has no line set tracking data")
+            return None
+        
+        if len(play_data["ball_snap_tracking"]) == 0:
+            print(f"Play {gameId}-{playId} has no ball snap tracking data")
+            return None
+
         pre_snap_look_change = self._calculate_pre_snap_look_changes(play_data["line_set_tracking"], play_data["ball_snap_tracking"])
 
         offense_line_set_spatial_features = self.compute_offense_spatial_features(play_data, play_data["line_set_tracking"].filter(pl.col("team") == "offense"))
@@ -254,4 +266,4 @@ class PlayPredictionModel:
                 "line_set_spatial_features": line_set_spatial_features,
                 "ball_snap_spatial_features": ball_snap_spatial_features,
                 "play_type": play_data["play_info"]["playType"],
-                "expected_point_added": play_data["play_info"]["expectedPointsAdded"]}
+                "expected_points_added": play_data["play_info"]["expectedPointsAdded"]}
