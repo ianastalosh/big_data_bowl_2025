@@ -28,23 +28,34 @@ class NonTrackingDataProcessor:
         """
         team_level_player_play_summary = self.player_plays.\
             with_columns(
-                motionOrShiftSinceLineset=((pl.col("motionSinceLineset") == "TRUE") | (pl.col("shiftSinceLineset") == "TRUE"))).\
+                playerHadMotionAndCameSet=((pl.col("motionSinceLineset") == "TRUE") | (pl.col("shiftSinceLineset") == "TRUE")),
+                playerHadPreSnapMotion=((pl.col("motionSinceLineset") == "TRUE") | (pl.col("shiftSinceLineset") == "TRUE") | (pl.col("inMotionAtBallSnap") == "TRUE"))).\
             group_by(["gameId", "playId", "teamAbbr"]).\
             agg(playNumPlayersInMotionAtSnap=(pl.col("inMotionAtBallSnap") == "TRUE").sum(),
                 playNumPlayersShiftSinceLineset=(pl.col("shiftSinceLineset") == "TRUE").sum(),
                 playNumPlayersMotionSinceLineset=(pl.col("motionSinceLineset") == "TRUE").sum(),
-                playNumPlayersMotionOrShiftSinceLineset=(pl.col("motionOrShiftSinceLineset") == True).sum(),
-                playYardageGainedAfterTheCatch=pl.col("yardageGainedAfterTheCatch").sum(),
-                playNumRoutesRun=(pl.col("wasRunningRoute") == "1").sum(),
-                playerMotionWasTargetted=((pl.col("motionSinceLineset") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum(),
-                playerInMotionAtSnapWasTargetted=((pl.col("inMotionAtBallSnap") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum()).\
+                playNumPlayersHadMotionAndCameSet=(pl.col("playerHadMotionAndCameSet") == True).sum(),
+                playNumPlayersPreSnapMotion=(pl.col("playerHadPreSnapMotion") == True).sum(),
+                playerMotionCameSetWasTargetted=((pl.col("playerHadMotionAndCameSet") == True) & (pl.col("wasTargettedReceiver") == 1)).sum(),
+                playerInMotionAtSnapWasTargetted=((pl.col("inMotionAtBallSnap") == "TRUE") & (pl.col("wasTargettedReceiver") == 1)).sum(),
+                playerInMotionAtSnapRanRoute=((pl.col("inMotionAtBallSnap") == "TRUE") & (pl.col("routeRan") == "TRUE")).sum(),
+                playerPreSnapMotionWasTargetted=((pl.col("playerHadPreSnapMotion") == True) & (pl.col("wasTargettedReceiver") == 1)).sum(),
+                yardsAfterCatch=pl.sum("yardageGainedAfterTheCatch"),
+                playNumTargetedReceivers=pl.sum("wasTargettedReceiver"),
+                ).\
             with_columns(
                 playHadPlayersInMotionAtSnap=(pl.col("playNumPlayersInMotionAtSnap") > 0),
                 playHadPlayersMotionSinceLineset=(pl.col("playNumPlayersMotionSinceLineset") > 0),
                 playHadPlayersShiftSinceLineset=(pl.col("playNumPlayersShiftSinceLineset") > 0),
-                playhadPlayersMotionOrShiftSinceLineset=(pl.col("playNumPlayersMotionOrShiftSinceLineset") > 0),
-                playHadMotion=(pl.when(pl.col("playNumPlayersInMotionAtSnap") + pl.col("playNumPlayersMotionOrShiftSinceLineset") > 0).then(1).otherwise(0)),
-        )
+                playHadMotionAndCameSet=(pl.col("playNumPlayersHadMotionAndCameSet") > 0),
+                playHadPreSnapMotion=(pl.col("playNumPlayersPreSnapMotion") > 0)        
+            ).\
+            with_columns(
+                playMotionType=pl.when((pl.col("playHadMotionAndCameSet") == True) & (pl.col("playHadPlayersInMotionAtSnap") == True)).then(pl.lit("Pre-snap and at-snap motion")).\
+                                    when((pl.col("playHadMotionAndCameSet") == True) & (pl.col("playHadPlayersInMotionAtSnap") == False)).then(pl.lit("Pre-snap only")).\
+                                    when((pl.col("playHadMotionAndCameSet") == False) & (pl.col("playHadPlayersInMotionAtSnap") == True)).then(pl.lit("At-snap only")).\
+                                    otherwise(pl.lit("No motion"))
+            )
 
         return team_level_player_play_summary
     
@@ -56,14 +67,17 @@ class NonTrackingDataProcessor:
             possessionTeamNumPlayersInMotionAtSnap = pl.col("playNumPlayersInMotionAtSnap"),
             possessionTeamNumPlayersShiftSinceLineset = pl.col("playNumPlayersShiftSinceLineset"),
             possessionTeamNumPlayersMotionSinceLineset = pl.col("playNumPlayersMotionSinceLineset"),
-            playerMotionWasTargetted = pl.col("playerMotionWasTargetted"),
-            playerInMotionAtSnapWasTargetted = pl.col("playerInMotionAtSnapWasTargetted"),
+            playNumTargetedReceivers=pl.col("playNumTargetedReceivers"),
             playHadPlayersInMotionAtSnap=pl.col("playHadPlayersInMotionAtSnap"),
             playHadPlayersMotionSinceLineset=pl.col("playHadPlayersMotionSinceLineset"),
             playHadPlayersShiftSinceLineset=pl.col("playHadPlayersShiftSinceLineset"),
-            playhadPlayersMotionOrShiftSinceLineset=pl.col("playhadPlayersMotionOrShiftSinceLineset"),
-            playHadMotion=pl.col("playHadMotion"),
-            
+            playHadMotionAndCameSet=pl.col("playHadMotionAndCameSet"),
+            playHadPreSnapMotion=pl.col("playHadPreSnapMotion"),
+            playerMotionCameSetWasTargetted = pl.col("playerMotionCameSetWasTargetted"),
+            playerInMotionAtSnapWasTargetted = pl.col("playerInMotionAtSnapWasTargetted"),
+            playerPreSnapMotionWasTargetted = pl.col("playerPreSnapMotionWasTargetted"),
+            playMotionType=pl.col("playMotionType"),
+            yardsAfterCatch=pl.col("yardsAfterCatch")
         )
 
         defensive_team_df = aggregated_player_play_df.select(
@@ -84,6 +98,8 @@ class NonTrackingDataProcessor:
 
         # Create possession team features
         output_data = games_plays_joined.with_columns(
+            # Extract time remaining
+            quarterSecondsRemaining=pl.col('gameClock').str.split(':').map_elements(lambda x: int(x[0]) * 60 + int(x[1])),
             # Get distance to the endzone
             distanceToEndzone=pl.when(pl.col("possessionTeam") == pl.col("yardlineSide")).then(100 - pl.col("yardlineNumber")).otherwise(pl.col("yardlineNumber")),
             # Extract play type
@@ -102,6 +118,8 @@ class NonTrackingDataProcessor:
             # Add score difference
         ).with_columns(
             scoreDifference=(pl.col("preSnapPossessionTeamScore") - pl.col("preSnapDefensiveTeamScore")),
+            halfSecondsRemaining=pl.when(pl.col("quarter").is_in([2,4,5,6])).then(pl.col("quarterSecondsRemaining")).otherwise(900 + pl.col("quarterSecondsRemaining")),
+            gameSecondsRemaining=pl.when(pl.col("quarter").is_in([5])).then(pl.col("quarterSecondsRemaining")).otherwise(900 * (4 - pl.col("quarter")) + pl.col("quarterSecondsRemaining")),
         )
 
         # Join the aggregated player plays data

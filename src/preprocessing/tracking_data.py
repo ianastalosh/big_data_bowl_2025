@@ -14,7 +14,12 @@ class TrackingDataProcessor:
     def _load_tracking_data(self) -> None:
         tracking_data_list = []
         for file_path in self.tracking_data_file_paths:
-            tracking_data_list.append(pl.scan_csv(file_path, ignore_errors=True))
+            tracking_data = pl.scan_csv(file_path, ignore_errors=True)
+            # Append the week
+            tracking_data = tracking_data.with_columns(
+                week=pl.lit(int(file_path[-5]))
+            )
+            tracking_data_list.append(tracking_data)
             logging.info(f"Loaded file {file_path}")
         tracking_data = pl.concat(tracking_data_list)
         self.tracking_data = tracking_data
