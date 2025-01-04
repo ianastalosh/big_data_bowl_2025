@@ -99,7 +99,7 @@ class NonTrackingDataProcessor:
         # Create possession team features
         output_data = games_plays_joined.with_columns(
             # Extract time remaining
-            quarterSecondsRemaining=pl.col('gameClock').str.split(':').map_elements(lambda x: int(x[0]) * 60 + int(x[1])),
+            quarterSecondsRemaining=pl.col('gameClock').str.split(':').map_elements(lambda x: int(x[0]) * 60 + int(x[1]), return_dtype=pl.Int32),
             # Get distance to the endzone
             distanceToEndzone=pl.when(pl.col("possessionTeam") == pl.col("yardlineSide")).then(100 - pl.col("yardlineNumber")).otherwise(pl.col("yardlineNumber")),
             # Extract play type

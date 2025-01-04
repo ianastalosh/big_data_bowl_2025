@@ -261,9 +261,8 @@ class PlayPredictionModel:
         line_set_spatial_features = {**offense_line_set_spatial_features, **defense_line_set_spatial_features}
         ball_snap_spatial_features = {**offense_ball_snap_spatial_features, **defense_ball_snap_spatial_features}
 
-        return {"game_state_features": game_state_features,
+        return {"play_info": play_data["play_info"],
+                "game_state_features": game_state_features,
                 "pre_snap_location_change": pre_snap_look_change,
                 "line_set_spatial_features": line_set_spatial_features,
-                "ball_snap_spatial_features": ball_snap_spatial_features,
-                "play_type": play_data["play_info"]["playType"],
-                "expected_points_added": play_data["play_info"]["expectedPointsAdded"]}
+                "ball_snap_spatial_features": ball_snap_spatial_features}
