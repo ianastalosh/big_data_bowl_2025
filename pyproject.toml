@@ -20,6 +20,7 @@ pyarrow = "^18.0.0"
 shapely = "^2.0.6"
 scikit-learn = "^1.6.0"
 snakeviz = "^2.2.2"
+lightgbm = "^4.5.0"
 
 
 [build-system]

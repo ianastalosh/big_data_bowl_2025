@@ -261,8 +261,68 @@ class PlayPredictionModel:
         line_set_spatial_features = {**offense_line_set_spatial_features, **defense_line_set_spatial_features}
         ball_snap_spatial_features = {**offense_ball_snap_spatial_features, **defense_ball_snap_spatial_features}
 
+        spatial_change_epa_state = {
+            **game_state_features,
+            "possessionTeam": play_data["play_info"]["possessionTeam"],
+            "defensiveTeam": play_data["play_info"]["defensiveTeam"],
+            "playHadPlayersInMotionAtSnap": play_data["play_info"]["playHadPlayersInMotionAtSnap"],
+            "playHadMotionAndCameSet": play_data["play_info"]["playHadMotionAndCameSet"],
+            "expectedPointsAdded": play_data["play_info"]["expectedPointsAdded"],
+            "playType": play_data["play_info"]["playType"],
+            "offenseChange": pre_snap_look_change["offense_total_location_change"],
+            "defenseChange": pre_snap_look_change["defense_total_location_change"],
+        }
+
+        game_state_features_with_target = {
+            **game_state_features,
+            "playType": play_data["play_info"]["playType"],
+            "isPass": 1 if play_data["play_info"]["playType"] == "pass" else 0,
+            "split": "train" if play_data["play_info"]["week"] <= 6 else "test"
+        }
+
+        line_set_spatial_features_with_target = {
+            "gameId": play_data["play_info"]["gameId"],
+            "playId": play_data["play_info"]["playId"],
+            **line_set_spatial_features,
+            "playType": play_data["play_info"]["playType"],
+            "isPass": 1 if play_data["play_info"]["playType"] == "pass" else 0,
+            "split": "train" if play_data["play_info"]["week"] <= 6 else "test"
+        }
+
+        ball_snap_spatial_features_with_target = {
+            "gameId": play_data["play_info"]["gameId"],
+            "playId": play_data["play_info"]["playId"],
+            **ball_snap_spatial_features,
+            "playType": play_data["play_info"]["playType"],
+            "isPass": 1 if play_data["play_info"]["playType"] == "pass" else 0,
+            "split": "train" if play_data["play_info"]["week"] <= 6 else "test"
+        }
+
+        line_set_game_state_with_spatial_features_and_target = {
+            **game_state_features,
+            **line_set_spatial_features,
+            "playType": play_data["play_info"]["playType"],
+            "isPass": 1 if play_data["play_info"]["playType"] == "pass" else 0,
+            "split": "train" if play_data["play_info"]["week"] <= 6 else "test"
+        }
+
+        ball_snap_game_state_with_spatial_features_and_target = {
+            **game_state_features,
+            **ball_snap_spatial_features,
+            "playType": play_data["play_info"]["playType"],
+            "isPass": 1 if play_data["play_info"]["playType"] == "pass" else 0,
+            "split": "train" if play_data["play_info"]["week"] <= 6 else "test"
+        }
+ 
         return {"play_info": play_data["play_info"],
                 "game_state_features": game_state_features,
                 "pre_snap_location_change": pre_snap_look_change,
                 "line_set_spatial_features": line_set_spatial_features,
-                "ball_snap_spatial_features": ball_snap_spatial_features}
+                "ball_snap_spatial_features": ball_snap_spatial_features,
+                "spatial_change_epa_state": spatial_change_epa_state,
+                "game_state_features_with_target": game_state_features_with_target,
+                "line_set_spatial_features_with_target": line_set_spatial_features_with_target,
+                "ball_snap_spatial_features_with_target": ball_snap_spatial_features_with_target,
+                "line_set_game_state_with_spatial_features_and_target": line_set_game_state_with_spatial_features_and_target,
+                "ball_snap_game_state_with_spatial_features_and_target": ball_snap_game_state_with_spatial_features_and_target
+                }
