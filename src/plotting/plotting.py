@@ -76,13 +76,14 @@ class PlotPlay():
         if event:
             # Add new event text at top of plot
             self.event_text = self.ax.text(
-                0.5, 1.05,  # Position above the field
-                f"Latest event: {event}",
+                # 0.5, 1.05,  # Position above the field
+                # position below the field
+                0.5, -0.05,
+                f"Latest event: {event.title()}",
                 transform=self.ax.transAxes,  # Use axis coordinates
                 ha='center',
                 va='bottom',
                 fontsize=12,
-                fontweight='bold'
             )
 
     def plot_frame(self, frame_id):
@@ -145,41 +146,40 @@ class PlotPlayHorizontal(PlotPlay):
         super().__init__(play_df)
     
     def _plot_field(self):
-        
         # Create limits
-        self.ax.set_xlim(self.min_x - 10, self.max_x + 10)
-        self.ax.set_ylim(self.min_y - 10, self.max_y + 10) 
+        self.ax.set_xlim(self.min_y - 10, self.max_y + 10)
+        self.ax.set_ylim(self.min_x - 10, self.max_x + 10) 
 
         # Colour the endzones
-        endzone1 = patches.Rectangle((0,0), 10, 160/3, linewidth=1, edgecolor='darkviolet', facecolor='darkviolet')
-        endzone2 = patches.Rectangle((110,0), 10, 160/3, linewidth=1, edgecolor='darkviolet', facecolor='darkviolet')
+        endzone1 = patches.Rectangle((0,0), 160/3, 10, linewidth=1, edgecolor='#3266a8', facecolor='#3266a8', clip_on=True)
+        endzone2 = patches.Rectangle((0,110), 160/3, 10, linewidth=1, edgecolor='#3266a8', facecolor='#3266a8', clip_on=True)
 
         self.ax.add_patch(endzone1)
         self.ax.add_patch(endzone2)
 
         # Draw field outline
-        self.ax.plot([0,120], [0,0], color="black")
-        self.ax.plot([0,120], [160/3,160/3], color="black")
-        self.ax.plot([0,0], [0,160/3], color="black")
-        self.ax.plot([120,120], [0,160/3], color="black")
+        self.ax.plot([0,0], [0,120], color="black", clip_on=True)
+        self.ax.plot([0,160/3], [0, 0], color="black", clip_on=True)
+        self.ax.plot([160/3,0], [120, 120], color="black", clip_on=True)
+        self.ax.plot([160/3,160/3], [120,0], color="black", clip_on=True)
 
         # Draw yard lines
-        for x in range(10,115,5):
-            self.ax.plot([x,x], [0,160/3], color="black")
+        for y in range(10,115,5):
+            self.ax.plot([0,160/3], [y,y], color="black", clip_on=True)
 
         # Draw hash marks
-        for x in range(10,110,1):
-            self.ax.plot([x,x], [160/6 - 3.0833 - 1, 160/6 - 3.0833], color="black", linewidth=0.5)
-            self.ax.plot([x,x], [160/6 + 3.0833 + 1, 160/6 + 3.0833], color="black", linewidth=0.5)
+        for y in range(10,110,1):
+            self.ax.plot([160/6 - 3.0833 - 1, 160/6 - 3.0833], [y,y], color="black", linewidth=0.5, clip_on=True)
+            self.ax.plot([160/6 + 3.0833 + 1, 160/6 + 3.0833], [y,y], color="black", linewidth=0.5, clip_on=True)
             
         # Draw the yard numbers
-        for x in range(10,50,10):
-            self.ax.text(x+10, 160/6 - 3.0833 - 12, str(x), fontsize=10, color="black", ha='center')
-            self.ax.text(x+10, 160/6 + 3.0833 + 12, str(x), fontsize=10, color="black", ha='center')
-            self.ax.text(110-x, 160/6 - 3.0833 - 12, str(x), fontsize=10, color="black", ha='center')
-            self.ax.text(110-x, 160/6 + 3.0833 + 12, str(x), fontsize=10, color="black", ha='center')
-        self.ax.text(60, 160/6 - 3.0833 - 12, "50", fontsize=10, color="black", ha='center')
-        self.ax.text(60, 160/6 + 3.0833 + 12, "50", fontsize=10, color="black", ha='center')
+        for y in range(10,50,10):
+            self.ax.text(160/6 - 3.0833 - 12, y+10, str(y), fontsize=10, color="black", ha='right', va="center", rotation=-90, clip_on=True)
+            self.ax.text(160/6 + 3.0833 + 12, y+10, str(y), fontsize=10, color="black", ha='left', va="center", rotation=90, clip_on=True)
+            self.ax.text(160/6 - 3.0833 - 12, 110-y, str(y), fontsize=10, color="black", ha='right', va="center", rotation=-90, clip_on=True)
+            self.ax.text(160/6 + 3.0833 + 12, 110-y, str(y), fontsize=10, color="black", ha='left',va="center", rotation=90, clip_on=True)
+        self.ax.text(160/6 - 3.0833 - 12, 60, "50", fontsize=10, color="black", ha='right', va="center", rotation=-90, clip_on=True)
+        self.ax.text(160/6 + 3.0833 + 12, 60, "50", fontsize=10, color="black", ha='left', va="center", rotation=90, clip_on=True)
 
         self.ax.axis('off')
 
@@ -214,8 +214,8 @@ class PlotPlayVertical(PlotPlay):
         self.ax.set_ylim(self.min_x - 10, self.max_x + 10) 
 
         # Colour the endzones
-        endzone1 = patches.Rectangle((0,0), 160/3, 10, linewidth=1, edgecolor='darkviolet', facecolor='darkviolet')
-        endzone2 = patches.Rectangle((0,110), 160/3, 10, linewidth=1, edgecolor='darkviolet', facecolor='darkviolet')
+        endzone1 = patches.Rectangle((0,0), 160/3, 10, linewidth=1, edgecolor='#3266a8', facecolor='#3266a8')
+        endzone2 = patches.Rectangle((0,110), 160/3, 10, linewidth=1, edgecolor='#3266a8', facecolor='#3266a8')
 
         self.ax.add_patch(endzone1)
         self.ax.add_patch(endzone2)
